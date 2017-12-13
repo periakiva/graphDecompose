@@ -1,4 +1,5 @@
 import os
+from collections import Counter
 import plotly.plotly as py
 from plotly.graph_objs import *
 import networkx as nx
@@ -10,17 +11,18 @@ pathTest="/home/native/projects/graphDecompose/testGraph.txt"
 
 def pickleGraph(path):
     G= nx.read_edgelist(path)
-    nx.write_gpickle(G,"graph2.gpickle")
+    nx.write_gpickle(G,"graph.gpickle")
 
-pickleGraph(pathTest)
+#pickleGraph(pathNodes)
 
 def loadGraphPickle():
-        return nx.read_gpickle("graph2.gpickle")
+        return nx.read_gpickle("graph.gpickle")
 
 G = loadGraphPickle()
 G.remove_edges_from(G.selfloop_edges())
 Gk = nx.k_core(G)
-#G=nx.dodecahedral_graph()
+nScc = nx.number_connected_components(G)
+coreN = nx.core_number(G)
 def plotGraph(G):
     pos=nx.spring_layout(G)
     dmin=1
@@ -53,36 +55,36 @@ def plotDegreeHist(G):
     nx.draw_networkx_nodes(Gcc,pos,node_size=20)
     nx.draw_networkx_edges(Gcc,pos,alpha=0.4)
     plt.show()
+
 #plotGraph(G)
-plotDegreeHist(G)
+#plotDegreeHist(G)
 #degreeSeq = sorted(nx.degree(G).values(),reverse=True)
 #print degreeSeq
 #print len(G)
-"""
-pos = nx.spring_layout(G)
-print pos
-print G.edges()
-edge_trace = Scatter(x=[],y=[],line=Line(width=0.5,color='#888'),hoverinfo='none',mode='lines')
+#print len(Gk)
+print "NUmber of connected components in biggest core: " + str(nScc)
+#print coreN.values()
+#print type(nScc)
+#nodePerCore=Counter(coreN.values())
+print "Total Node: " + str(G.number_of_nodes())
+print "Total Edges: " + str(G.number_of_edges())
 
-for edge in G.edges():
-    x0,y0 = G.node[edge[0]][pos]
-    x1,y1 = G.node[edge[1]]['pos']
-    edge_trace['x']+=[x0,x1,None]
-    edge_trace['y']+=[y0,y1,None]
+def findVerticesEdges(G):
+    vePerCore={}
+    SccPerCore={}
+    for i in xrange(1,18):
+        Gtemp = nx.k_core(G,k=i)
+        vePerCore[i]=(Gtemp.number_of_nodes(),Gtemp.number_of_edges())
+        SccPerCore[i]=(i,nx.number_connected_components(Gtemp))
+    return vePerCore, SccPerCore
 
-node_trace=Scatter(x=[],y=[],text=[],mode='markers',hoverinfo='text',marker=Marker(showscale=True,colorscale='YIGnBu',reversescale=True,color=[],size=10,colorbar=dict(thickness=15,title='Node Connections',xanchor='left',titleside='right'),line=dict(width=2)))
+vePerCore,SccPerCore = findVerticesEdges(G)
 
-for node in G.nodes():
-    x,y=G.node[node]['pos']
-    node_trace['x'].append(x)
-    node_trace['y'].append(y)
+def writeCoresNodes(nodePerCoreDict,SccPerCore):
+    with open('nodePerCore.txt','w') as f:
+        f.write(str(nodePerCoreDict))
+    with open('SccPerCore.txt','w') as f:
+        f.write(str(SccPerCore))
 
-for node,adjacencies in enumerate(G.adjacency_list()):
-    node_trace['marker']['color'].append(len(adjacencies))
-    node_info = '# of connections: ' + str(len(adjacencies))
-    node_trace['text'].append(node_info)
+writeCoresNodes(vePerCore,SccPerCore)
 
-fig = Figure(data=Data([edge_trace,node_trace]),layout=Layout(title='<br>Network graph made with Python',titlefont=dict(size=16),showlegend=False,hovermode='closest',margin=dict(b=20,l=5,r=5,t=40),annotations=[ dict(text="bla bla bla",showarrow=False,xref="paper",yref="paper",x=0.005,y=-0.002)],xaxis=XAxis(showgrid=False,zeroline=False,showticklabels=False),yaxis=YAxis(showgrid=False,zeroline=False,showticklabels=False)))
-
-py.iplot(fig,filename='networkx')
-"""
